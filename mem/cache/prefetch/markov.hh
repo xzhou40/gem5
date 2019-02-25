@@ -33,25 +33,36 @@
  * Describes a tagged prefetcher.
  */
 
-#ifndef __MEM_CACHE_PREFETCH_TAGGED_HH__
-#define __MEM_CACHE_PREFETCH_TAGGED_HH__
+#ifndef __MEM_CACHE_PREFETCH_MARKOV_HH__
+#define __MEM_CACHE_PREFETCH_MARKOV_HH__
 
 #include "mem/cache/prefetch/queued.hh"
-#include "params/TaggedPrefetcher.hh"
+#include "params/MarkovPrefetcher.hh"
 
 
-class TaggedPrefetcher : public QueuedPrefetcher
+class MarkovPrefetcher : public QueuedPrefetcher
 {
   protected:
       int degree;
 
   public:
-    TaggedPrefetcher(const TaggedPrefetcherParams *p);
+    MarkovPrefetcher(const MarkovPrefetcherParams *p);
 
-    ~TaggedPrefetcher() {}
+    ~MarkovPrefetcher() {}
 
     void calculatePrefetch(const PacketPtr &pkt,
                            std::vector<AddrPriority> &addresses);
+
+  private:
+    typedef struct
+    {
+      Addr currentAddress;
+      std::list<Addr> nextAddresses;
+    }markovTableEntry;
+    
+    std::vector<markovTableEntry>markovTable;
+    Addr previousMiss;
+    size_t num_entries;
 };
 
-#endif // __MEM_CACHE_PREFETCH_TAGGED_HH__
+#endif // __MEM_CACHE_PREFETCH_MARKOV_HH__

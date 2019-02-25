@@ -33,34 +33,93 @@
  * Describes a tagged prefetcher based on template policies.
  */
 
-#include "mem/cache/prefetch/tagged.hh"
+#include "mem/cache/prefetch/markov.hh"
 
-TaggedPrefetcher::TaggedPrefetcher(const TaggedPrefetcherParams *p)
-    : QueuedPrefetcher(p), degree(p->degree)
+MarkovPrefetcher::MarkovPrefetcher(const MarkovPrefetcherParams *p)
+    : QueuedPrefetcher(p), 
+      degree(p->degree),
+      num_entries(p->num_entries)
 {
+    markovTable.resize(num_entries);
+    for (size_t i =0; i<num_entries; i++){
+        markovTable[i].currentAddress = 0;
+        markovTable[i].nextAddresses.resize(degree);
+    }
 
+    previousMiss = 0;
 }
 
 void
-TaggedPrefetcher::calculatePrefetch(const PacketPtr &pkt,
+MarkovPrefetcher::calculatePrefetch(const PacketPtr &pkt,
         std::vector<AddrPriority> &addresses)
 {
     Addr blkAddr = pkt->getAddr() & ~(Addr)(blkSize-1);
+    std::list<Addr>::iterator it;
+    size_t index;
 
-    for (int d = 1; d <= degree; d++) {
-        Addr newAddr = blkAddr + d*(blkSize);
-        if (!samePage(blkAddr, newAddr)) {
-            // Count number of unissued prefetches due to page crossing
-            pfSpanPage += degree - d + 1;
-            return;
-        } else {
-            addresses.push_back(AddrPriority(newAddr,0));
+    /** Update previousMiss's nextAddresses **/
+    if(previousMiss != 0){
+        index = (previousMiss >> lBlkSize) 
+                & (Addr)(num_entries-1);
+        
+        //check if already exists in nextAddresses
+        int flag = 0;
+        for (it = markovTable[index].nextAddresses.begin(); 
+        it != markovTable[index].nextAddresses.end(); ++it) {
+            if(*it == blkAddr){
+                flag = 1;
+                break;
+            }
+        }
+
+        if (flag){
+            //already exists
+            //move to the front
+            markovTable[index].nextAddresses.splice(
+                markovTable[index].nextAddresses.begin(),
+                markovTable[index].nextAddresses,
+                it);
+        }else{
+            //pop back and push front
+            markovTable[index].nextAddresses.pop_back();
+            markovTable[index].nextAddresses.push_front(blkAddr);
         }
     }
+
+    /** Update entry for currentAddress **/
+    previousMiss = pkt->getAddr();
+    index = (previousMiss >> lBlkSize) 
+            & (Addr)(num_entries-1);
+    
+    if (markovTable[index].currentAddress==blkAddr){
+        //hit
+        it = markovTable[index].nextAddresses.begin();
+        for (int d = 0; d < degree; d++) {
+
+            Addr newAddr = *it;
+            if (newAddr==0) break;
+
+            if (!samePage(blkAddr, newAddr)) {
+                // Count number of unissued prefetches due to page crossing
+                pfSpanPage += degree - d;
+                return;
+            } else {
+                addresses.push_back(AddrPriority(newAddr,0));
+            }
+            
+            ++it;
+        }
+    }else {
+        //either conflit or miss
+        //just overwrite
+        markovTable[index].currentAddress=blkAddr;
+        markovTable[index].nextAddresses.resize(degree, 0);
+    }
+
 }
 
-TaggedPrefetcher*
-TaggedPrefetcherParams::create()
+MarkovPrefetcher*
+MarkovPrefetcherParams::create()
 {
-   return new TaggedPrefetcher(this);
+   return new MarkovPrefetcher(this);
 }

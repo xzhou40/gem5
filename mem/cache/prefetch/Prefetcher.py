@@ -90,3 +90,13 @@ class TaggedPrefetcher(QueuedPrefetcher):
     cxx_header = "mem/cache/prefetch/tagged.hh"
 
     degree = Param.Int(2, "Number of prefetches to generate")
+
+class MarkovPrefetcher(QueuedPrefetcher):
+    type = 'MarkovPrefetcher'
+    cxx_class = 'MarkovPrefetcher'
+    cxx_header = "mem/cache/prefetch/markov.hh"
+
+    degree = Param.Int(4, "Number of prefetches to generate")
+    num_entries = Param.Int(4096, "Number of entries in the Markov table")
+
+
