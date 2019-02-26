@@ -101,8 +101,9 @@ MarkovPrefetcher::calculatePrefetch(const PacketPtr &pkt,
 
             if (!samePage(blkAddr, newAddr)) {
                 // Count number of unissued prefetches due to page crossing
-                pfSpanPage += degree - d;
-                return;
+                pfSpanPage += 1;
+                ++it;
+                continue;
             } else {
                 addresses.push_back(AddrPriority(newAddr,0));
             }

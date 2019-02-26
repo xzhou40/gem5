@@ -96,6 +96,8 @@ class MarkovPrefetcher(QueuedPrefetcher):
     cxx_class = 'MarkovPrefetcher'
     cxx_header = "mem/cache/prefetch/markov.hh"
 
+    on_miss = Param.Bool(True, "Only notify prefetcher on misses")
+
     degree = Param.Int(4, "Number of prefetches to generate")
     num_entries = Param.Int(4096, "Number of entries in the Markov table")
 
