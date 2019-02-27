@@ -41,6 +41,8 @@ MarkovPrefetcher::MarkovPrefetcher(const MarkovPrefetcherParams *p)
       degree(p->degree),
       num_entries(p->num_entries)
 {
+    onMiss = true;
+
     markovTable.resize(num_entries);
     for (size_t i =0; i<num_entries; i++){
         markovTable[i].currentAddress = 0;
@@ -56,16 +58,18 @@ MarkovPrefetcher::calculatePrefetch(const PacketPtr &pkt,
 {
     if(pkt->getAddr() == previousMiss)
         return;
-        
+
     Addr blkAddr = pkt->getAddr() & ~(Addr)(blkSize-1);
     std::list<Addr>::iterator it;
     size_t index;
-    DPRINTF(Markov, "Block size %d \n", blkSize);
-    DPRINTF(Markov, "Miss address is: %x , full addr %x \n", blkAddr, pkt->getAddr());
+    DPRINTF(Markov, "!!!!!!!!!!!!!!!On!!Miss: %d\n", onMiss);
+
+    DPRINTF(Markov, "1 Miss address is: %x\n", blkAddr);
     /** Update previousMiss's nextAddresses **/
     if(previousMiss != 0){
         index = (previousMiss >> lBlkSize) 
                 & (Addr)(num_entries-1);
+        DPRINTF(Markov, "2 Prev miss index is:%d \n", index);
         
         //check if already exists in nextAddresses
         int flag = 0;
@@ -96,6 +100,8 @@ MarkovPrefetcher::calculatePrefetch(const PacketPtr &pkt,
     index = (previousMiss >> lBlkSize) 
             & (Addr)(num_entries-1);
     
+    DPRINTF(Markov, "3 Curr miss index is:%d \n", index);
+
     // if (markovTable[index].currentAddress==blkAddr){
         //hit
         it = markovTable[index].nextAddresses.begin();
@@ -107,8 +113,10 @@ MarkovPrefetcher::calculatePrefetch(const PacketPtr &pkt,
                     // Count number of unissued prefetches due to page crossing
                     pfSpanPage += 1;
                 } else {
-                    addresses.push_back(AddrPriority(newAddr,degree-1-d));
-                    DPRINTF(Markov, "Issued address is: %x, priority %d \n", newAddr, degree-1-d);
+                    if(newAddr != blkAddr){
+                        addresses.push_back(AddrPriority(newAddr,degree-1-d));
+                        DPRINTF(Markov, "4 Issued address is: %x, priority %d \n", newAddr, degree-1-d);
+                    }
                 }
             }
             
