@@ -102,9 +102,9 @@ BasePrefetcher::observeAccess(const PacketPtr &pkt) const
     if (pkt->cmd == MemCmd::CleanEvict) return false;
 
     if (onMiss) {
-        return !inCache(addr, is_secure); 
-        // &&
-        //        !inMissQueue(addr, is_secure);
+        return !inCache(addr, is_secure) 
+        &&
+               !inMissQueue(addr, is_secure);
     }
 
     return true;

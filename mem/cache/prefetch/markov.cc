@@ -54,11 +54,14 @@ void
 MarkovPrefetcher::calculatePrefetch(const PacketPtr &pkt,
         std::vector<AddrPriority> &addresses)
 {
+    if(pkt->getAddr() == previousMiss)
+        return;
+        
     Addr blkAddr = pkt->getAddr() & ~(Addr)(blkSize-1);
     std::list<Addr>::iterator it;
     size_t index;
-
-    DPRINTF(Markov, "Miss address is: %x \n", blkAddr);
+    DPRINTF(Markov, "Block size %d \n", blkSize);
+    DPRINTF(Markov, "Miss address is: %x , full addr %x \n", blkAddr, pkt->getAddr());
     /** Update previousMiss's nextAddresses **/
     if(previousMiss != 0){
         index = (previousMiss >> lBlkSize) 
