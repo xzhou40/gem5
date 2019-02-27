@@ -38,3 +38,5 @@ Source('stride.cc')
 Source('tagged.cc')
 Source('markov.cc')
 
+DebugFlag('Markov')
+

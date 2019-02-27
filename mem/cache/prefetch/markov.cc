@@ -34,6 +34,7 @@
  */
 
 #include "mem/cache/prefetch/markov.hh"
+#include "debug/Markov.hh"
 
 MarkovPrefetcher::MarkovPrefetcher(const MarkovPrefetcherParams *p)
     : QueuedPrefetcher(p), 
@@ -57,6 +58,7 @@ MarkovPrefetcher::calculatePrefetch(const PacketPtr &pkt,
     std::list<Addr>::iterator it;
     size_t index;
 
+    DPRINTF(Markov, "Miss address is: %x \n", blkAddr);
     /** Update previousMiss's nextAddresses **/
     if(previousMiss != 0){
         index = (previousMiss >> lBlkSize) 
@@ -91,31 +93,30 @@ MarkovPrefetcher::calculatePrefetch(const PacketPtr &pkt,
     index = (previousMiss >> lBlkSize) 
             & (Addr)(num_entries-1);
     
-    if (markovTable[index].currentAddress==blkAddr){
+    // if (markovTable[index].currentAddress==blkAddr){
         //hit
         it = markovTable[index].nextAddresses.begin();
         for (int d = 0; d < degree; d++) {
 
             Addr newAddr = *it;
-            if (newAddr==0) break;
-
-            if (!samePage(blkAddr, newAddr)) {
-                // Count number of unissued prefetches due to page crossing
-                pfSpanPage += 1;
-                ++it;
-                continue;
-            } else {
-                addresses.push_back(AddrPriority(newAddr,0));
+            if (newAddr!=0){
+                if (!samePage(blkAddr, newAddr)) {
+                    // Count number of unissued prefetches due to page crossing
+                    pfSpanPage += 1;
+                } else {
+                    addresses.push_back(AddrPriority(newAddr,degree-1-d));
+                    DPRINTF(Markov, "Issued address is: %x, priority %d \n", newAddr, degree-1-d);
+                }
             }
             
             ++it;
         }
-    }else {
-        //either conflit or miss
-        //just overwrite
-        markovTable[index].currentAddress=blkAddr;
-        markovTable[index].nextAddresses.resize(degree, 0);
-    }
+    // }else {
+    //     //either conflit or miss
+    //     //just overwrite
+    //     markovTable[index].currentAddress=blkAddr;
+    //     markovTable[index].nextAddresses.resize(degree, 0);
+    // }
 
 }
 
